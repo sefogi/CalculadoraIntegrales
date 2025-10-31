@@ -10,9 +10,12 @@ public class CalculadoraIntegrales extends JFrame {
     private JTextField txtFuncion;
     private JTextField txtLimiteInf;
     private JTextField txtLimiteSup;
+    private JTextField txtNumParticiones;
+    private JComboBox<String> cmbMetodoParticion;
     private JTextArea txtResultados;
     private PanelGrafico panelGrafico;
     private EvaluadorExpresiones evaluador;
+    private JCheckBox chkMostrarParticiones;
     
     public CalculadoraIntegrales() {
         setTitle("Calculadora de Integrales Definidas");
@@ -56,32 +59,59 @@ public class CalculadoraIntegrales extends JFrame {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        // Función
+        // Primera fila: Función
         gbc.gridx = 0; gbc.gridy = 0;
         panel.add(new JLabel("Función f(x):"), gbc);
         
-        gbc.gridx = 1; gbc.weightx = 1.0;
-        txtFuncion = new JTextField("x^3", 20);
+        gbc.gridx = 1; gbc.weightx = 1.0; gbc.gridwidth = 3;
+        txtFuncion = new JTextField("x^3", 30);
         panel.add(txtFuncion, gbc);
         
-        // Límite inferior
-        gbc.gridx = 2; gbc.weightx = 0;
+        // Segunda fila: Límites
+        gbc.gridy = 1; gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.weightx = 0;
         panel.add(new JLabel("Límite Inferior:"), gbc);
         
-        gbc.gridx = 3; gbc.weightx = 0.3;
+        gbc.gridx = 1; gbc.weightx = 0.3;
         txtLimiteInf = new JTextField("-3", 8);
         panel.add(txtLimiteInf, gbc);
         
-        // Límite superior
-        gbc.gridx = 4; gbc.weightx = 0;
+        gbc.gridx = 2; gbc.weightx = 0;
         panel.add(new JLabel("Límite Superior:"), gbc);
         
-        gbc.gridx = 5; gbc.weightx = 0.3;
+        gbc.gridx = 3; gbc.weightx = 0.3;
         txtLimiteSup = new JTextField("3", 8);
         panel.add(txtLimiteSup, gbc);
         
-        // Botón calcular
-        gbc.gridx = 6; gbc.weightx = 0;
+        // Tercera fila: Particiones
+        gbc.gridy = 2;
+        gbc.gridx = 0; gbc.weightx = 0;
+        panel.add(new JLabel("Núm. Particiones:"), gbc);
+        
+        gbc.gridx = 1; gbc.weightx = 0.3;
+        txtNumParticiones = new JTextField("10", 8);
+        panel.add(txtNumParticiones, gbc);
+        
+        gbc.gridx = 2; gbc.weightx = 0;
+        panel.add(new JLabel("Método:"), gbc);
+        
+        gbc.gridx = 3; gbc.weightx = 0.3;
+        cmbMetodoParticion = new JComboBox<>(new String[]{
+            "Punto Medio",
+            "Extremo Izquierdo", 
+            "Extremo Derecho",
+            "Trapecio (Integración)"
+        });
+        panel.add(cmbMetodoParticion, gbc);
+        
+        // Cuarta fila: Checkbox y botón
+        gbc.gridy = 3;
+        gbc.gridx = 0; gbc.gridwidth = 2;
+        chkMostrarParticiones = new JCheckBox("Mostrar particiones en gráfico", true);
+        chkMostrarParticiones.setBackground(new Color(240, 248, 255));
+        panel.add(chkMostrarParticiones, gbc);
+        
+        gbc.gridx = 2; gbc.gridwidth = 2; gbc.weightx = 0;
         JButton btnCalcular = new JButton("Calcular");
         btnCalcular.setBackground(new Color(70, 130, 180));
         btnCalcular.setForeground(Color.WHITE);
@@ -120,6 +150,7 @@ public class CalculadoraIntegrales extends JFrame {
             "• Operadores: +, -, *, /, ^ (potencia), paréntesis ()\n" +
             "• Funciones: sin(x), cos(x), tan(x), sqrt(x), abs(x), ln(x), log(x), exp(x)\n" +
             "• Constantes: pi, e\n" +
+            "• Particiones: Muestra rectángulos aproximando el área según el método seleccionado\n" +
             "• Ejemplos: x^3, sin(x)*cos(x), 2*x^2+3*x-1, sqrt(x^2+1)"
         );
         ayuda.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -133,6 +164,8 @@ public class CalculadoraIntegrales extends JFrame {
             String funcion = txtFuncion.getText().trim();
             double a = Double.parseDouble(txtLimiteInf.getText().trim());
             double b = Double.parseDouble(txtLimiteSup.getText().trim());
+            int numParticiones = Integer.parseInt(txtNumParticiones.getText().trim());
+            String metodo = (String) cmbMetodoParticion.getSelectedItem();
             
             if (a >= b) {
                 JOptionPane.showMessageDialog(this, 
@@ -141,10 +174,20 @@ public class CalculadoraIntegrales extends JFrame {
                 return;
             }
             
+            if (numParticiones < 1 || numParticiones > 100) {
+                JOptionPane.showMessageDialog(this, 
+                    "El número de particiones debe estar entre 1 y 100",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
             // Validar función
             evaluador.evaluar(funcion, 0);
             
-            // Calcular integrales
+            // Calcular con particiones
+            ResultadoParticiones resultadoParticiones = calcularConParticiones(funcion, a, b, numParticiones, metodo);
+            
+            // Calcular integrales precisas (con más subdivisiones)
             int n = 1000;
             double integralDefinida = calcularIntegralTrapecio(funcion, a, b, n);
             double areaTotal = calcularAreaTotal(funcion, a, b, n);
@@ -152,7 +195,14 @@ public class CalculadoraIntegrales extends JFrame {
             
             // Generar datos para gráfico
             ArrayList<Punto> puntos = generarPuntosGrafico(funcion, a, b, 200);
+            
+            // Configurar gráfico con particiones
             panelGrafico.setDatos(puntos, a, b);
+            if (chkMostrarParticiones.isSelected()) {
+                panelGrafico.setParticiones(resultadoParticiones.particiones);
+            } else {
+                panelGrafico.setParticiones(null);
+            }
             
             // Mostrar resultados
             StringBuilder sb = new StringBuilder();
@@ -164,11 +214,30 @@ public class CalculadoraIntegrales extends JFrame {
             sb.append(String.format("Intervalo: [%.4f, %.4f]\n\n", a, b));
             
             sb.append("───────────────────────────────────────────\n");
-            sb.append("1. INTEGRAL DEFINIDA (Suma algebraica)\n");
+            sb.append("MÉTODO DE PARTICIONES - " + metodo + "\n");
             sb.append("───────────────────────────────────────────\n");
-            sb.append(String.format("   ∫[%.2f,%.2f] f(x)dx = %.6f\n\n", a, b, integralDefinida));
+            sb.append(String.format("   Número de particiones: %d\n", numParticiones));
+            sb.append(String.format("   Ancho de cada partición: %.6f\n", resultadoParticiones.anchoPart));
+            sb.append(String.format("   Aproximación por particiones: %.6f\n\n", resultadoParticiones.aproximacion));
+            
+            sb.append("───────────────────────────────────────────\n");
+            sb.append("1. INTEGRAL DEFINIDA (Método del Trapecio)\n");
+            sb.append("───────────────────────────────────────────\n");
+            sb.append(String.format("   ∫[%.2f,%.2f] f(x)dx = %.6f\n", a, b, integralDefinida));
+            sb.append(String.format("   (Con %d subdivisiones para mayor precisión)\n\n", n));
             sb.append("   • Puede ser negativa o cero\n");
             sb.append("   • Áreas positivas y negativas se restan\n\n");
+            
+            // Calcular error de aproximación
+            double error = Math.abs(integralDefinida - resultadoParticiones.aproximacion);
+            double errorPorcentual = integralDefinida != 0 ? (error / Math.abs(integralDefinida)) * 100 : 0;
+            
+            sb.append("   📊 Error de aproximación:\n");
+            sb.append(String.format("      Error absoluto: %.6f\n", error));
+            if (integralDefinida != 0) {
+                sb.append(String.format("      Error porcentual: %.2f%%\n", errorPorcentual));
+            }
+            sb.append("\n");
             
             sb.append("───────────────────────────────────────────\n");
             sb.append("2. ÁREA TOTAL (Valor absoluto)\n");
@@ -192,21 +261,27 @@ public class CalculadoraIntegrales extends JFrame {
                 sb.append("  La integral definida es ≈0 porque las áreas\n");
                 sb.append("  positiva y negativa se cancelan.\n");
                 sb.append("  Sin embargo, el ÁREA REAL bajo la curva es:\n");
-                sb.append(String.format("  %.6f unidades cuadradas.\n", areaTotal));
+                sb.append(String.format("  %.6f unidades cuadradas.\n\n", areaTotal));
             } else if (integralDefinida < 0) {
                 sb.append("• La integral es negativa porque hay más\n");
-                sb.append("  área bajo el eje X que sobre él.\n");
+                sb.append("  área bajo el eje X que sobre él.\n\n");
             } else {
                 sb.append("• La integral es positiva porque hay más\n");
-                sb.append("  área sobre el eje X que bajo él.\n");
+                sb.append("  área sobre el eje X que bajo él.\n\n");
             }
+            
+            sb.append("───────────────────────────────────────────\n");
+            sb.append("💡 Sobre las particiones:\n");
+            sb.append("  A mayor número de particiones, mayor precisión.\n");
+            sb.append("  El método del trapecio converge más rápido que\n");
+            sb.append("  los métodos de punto medio o extremos.\n");
             
             txtResultados.setText(sb.toString());
             txtResultados.setCaretPosition(0);
             
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, 
-                "Por favor ingrese números válidos para los límites",
+                "Por favor ingrese números válidos para los límites y particiones",
                 "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, 
@@ -279,6 +354,73 @@ public class CalculadoraIntegrales extends JFrame {
         }
         
         return puntos;
+    }
+    
+    // Calcular integral con particiones
+    private ResultadoParticiones calcularConParticiones(String funcion, double a, double b, int n, String metodo) throws Exception {
+        double h = (b - a) / n;
+        double suma = 0;
+        ArrayList<Particion> particiones = new ArrayList<>();
+        
+        for (int i = 0; i < n; i++) {
+            double xi = a + i * h;
+            double xf = xi + h;
+            double xEval = 0;
+            double altura = 0;
+            
+            switch (metodo) {
+                case "Punto Medio":
+                    xEval = xi + h / 2;
+                    altura = evaluador.evaluar(funcion, xEval);
+                    break;
+                    
+                case "Extremo Izquierdo":
+                    xEval = xi;
+                    altura = evaluador.evaluar(funcion, xEval);
+                    break;
+                    
+                case "Extremo Derecho":
+                    xEval = xf;
+                    altura = evaluador.evaluar(funcion, xEval);
+                    break;
+                    
+                case "Trapecio (Integración)":
+                    double y1 = evaluador.evaluar(funcion, xi);
+                    double y2 = evaluador.evaluar(funcion, xf);
+                    altura = (y1 + y2) / 2;
+                    xEval = xi + h / 2; // Para visualización
+                    break;
+            }
+            
+            suma += altura * h;
+            particiones.add(new Particion(xi, xf, altura));
+        }
+        
+        return new ResultadoParticiones(suma, h, particiones);
+    }
+    
+    // Clase para resultado de particiones
+    static class ResultadoParticiones {
+        double aproximacion;
+        double anchoPart;
+        ArrayList<Particion> particiones;
+        
+        ResultadoParticiones(double aprox, double ancho, ArrayList<Particion> parts) {
+            this.aproximacion = aprox;
+            this.anchoPart = ancho;
+            this.particiones = parts;
+        }
+    }
+    
+    // Clase para representar una partición
+    static class Particion {
+        double xi, xf, altura;
+        
+        Particion(double xi, double xf, double altura) {
+            this.xi = xi;
+            this.xf = xf;
+            this.altura = altura;
+        }
     }
     
     // Clase para evaluar expresiones matemáticas
@@ -509,6 +651,7 @@ public class CalculadoraIntegrales extends JFrame {
     // Panel personalizado para dibujar el gráfico
     class PanelGrafico extends JPanel {
         private ArrayList<Punto> puntos;
+        private ArrayList<Particion> particiones;
         private double minX, maxX;
         private double minY, maxY;
         
@@ -537,6 +680,11 @@ public class CalculadoraIntegrales extends JFrame {
             minY -= margenY;
             maxY += margenY;
             
+            repaint();
+        }
+        
+        public void setParticiones(ArrayList<Particion> particiones) {
+            this.particiones = particiones;
             repaint();
         }
         
@@ -573,29 +721,56 @@ public class CalculadoraIntegrales extends JFrame {
             int ejeX = margen + (int)(graphWidth * (-minX / (maxX - minX)));
             g2.drawLine(ejeX, margen, ejeX, height - margen);
             
-            // Dibujar áreas coloreadas
-            for (int i = 0; i < puntos.size() - 1; i++) {
-                Punto p1 = puntos.get(i);
-                Punto p2 = puntos.get(i + 1);
+            // Dibujar particiones (rectángulos) si están habilitadas
+            if (particiones != null && !particiones.isEmpty()) {
+                g2.setStroke(new BasicStroke(1));
                 
-                int x1 = margen + (int)(graphWidth * (p1.x - minX) / (maxX - minX));
-                int x2 = margen + (int)(graphWidth * (p2.x - minX) / (maxX - minX));
-                int y1 = margen + (int)(graphHeight * (maxY - p1.y) / (maxY - minY));
-                int y2 = margen + (int)(graphHeight * (maxY - p2.y) / (maxY - minY));
-                
-                // Área positiva (azul)
-                if (p1.y > 0 && p2.y > 0) {
-                    g2.setColor(new Color(100, 149, 237, 100));
+                for (Particion part : particiones) {
+                    int x1 = margen + (int)(graphWidth * (part.xi - minX) / (maxX - minX));
+                    int x2 = margen + (int)(graphWidth * (part.xf - minX) / (maxX - minX));
+                    int y = margen + (int)(graphHeight * (maxY - part.altura) / (maxY - minY));
+                    
+                    // Color según si es positivo o negativo
+                    if (part.altura > 0) {
+                        g2.setColor(new Color(100, 149, 237, 80)); // Azul transparente
+                    } else {
+                        g2.setColor(new Color(255, 99, 71, 80)); // Rojo transparente
+                    }
+                    
+                    // Dibujar rectángulo
                     int[] xPoints = {x1, x2, x2, x1};
-                    int[] yPoints = {y1, y2, ejeY, ejeY};
+                    int[] yPoints = {ejeY, ejeY, y, y};
                     g2.fillPolygon(xPoints, yPoints, 4);
+                    
+                    // Borde del rectángulo
+                    g2.setColor(new Color(0, 0, 0, 150));
+                    g2.drawPolygon(xPoints, yPoints, 4);
                 }
-                // Área negativa (rojo)
-                else if (p1.y < 0 && p2.y < 0) {
-                    g2.setColor(new Color(255, 99, 71, 100));
-                    int[] xPoints = {x1, x2, x2, x1};
-                    int[] yPoints = {y1, y2, ejeY, ejeY};
-                    g2.fillPolygon(xPoints, yPoints, 4);
+            } else {
+                // Dibujar áreas coloreadas (solo si no hay particiones)
+                for (int i = 0; i < puntos.size() - 1; i++) {
+                    Punto p1 = puntos.get(i);
+                    Punto p2 = puntos.get(i + 1);
+                    
+                    int x1 = margen + (int)(graphWidth * (p1.x - minX) / (maxX - minX));
+                    int x2 = margen + (int)(graphWidth * (p2.x - minX) / (maxX - minX));
+                    int y1 = margen + (int)(graphHeight * (maxY - p1.y) / (maxY - minY));
+                    int y2 = margen + (int)(graphHeight * (maxY - p2.y) / (maxY - minY));
+                    
+                    // Área positiva (azul)
+                    if (p1.y > 0 && p2.y > 0) {
+                        g2.setColor(new Color(100, 149, 237, 100));
+                        int[] xPoints = {x1, x2, x2, x1};
+                        int[] yPoints = {y1, y2, ejeY, ejeY};
+                        g2.fillPolygon(xPoints, yPoints, 4);
+                    }
+                    // Área negativa (rojo)
+                    else if (p1.y < 0 && p2.y < 0) {
+                        g2.setColor(new Color(255, 99, 71, 100));
+                        int[] xPoints = {x1, x2, x2, x1};
+                        int[] yPoints = {y1, y2, ejeY, ejeY};
+                        g2.fillPolygon(xPoints, yPoints, 4);
+                    }
                 }
             }
             
@@ -637,15 +812,33 @@ public class CalculadoraIntegrales extends JFrame {
             
             // Leyenda
             g2.setFont(new Font("Arial", Font.BOLD, 12));
-            g2.setColor(new Color(100, 149, 237));
-            g2.fillRect(width - 180, 20, 15, 15);
-            g2.setColor(Color.BLACK);
-            g2.drawString("Área positiva", width - 160, 32);
             
-            g2.setColor(new Color(255, 99, 71));
-            g2.fillRect(width - 180, 40, 15, 15);
-            g2.setColor(Color.BLACK);
-            g2.drawString("Área negativa", width - 160, 52);
+            if (particiones != null && !particiones.isEmpty()) {
+                g2.setColor(new Color(100, 149, 237));
+                g2.fillRect(width - 180, 20, 15, 15);
+                g2.setColor(Color.BLACK);
+                g2.drawString("Particiones +", width - 160, 32);
+                
+                g2.setColor(new Color(255, 99, 71));
+                g2.fillRect(width - 180, 40, 15, 15);
+                g2.setColor(Color.BLACK);
+                g2.drawString("Particiones -", width - 160, 52);
+                
+                g2.setColor(new Color(0, 0, 139));
+                g2.drawLine(width - 180, 68, width - 165, 68);
+                g2.setColor(Color.BLACK);
+                g2.drawString("Función f(x)", width - 160, 72);
+            } else {
+                g2.setColor(new Color(100, 149, 237));
+                g2.fillRect(width - 180, 20, 15, 15);
+                g2.setColor(Color.BLACK);
+                g2.drawString("Área positiva", width - 160, 32);
+                
+                g2.setColor(new Color(255, 99, 71));
+                g2.fillRect(width - 180, 40, 15, 15);
+                g2.setColor(Color.BLACK);
+                g2.drawString("Área negativa", width - 160, 52);
+            }
         }
     }
     
