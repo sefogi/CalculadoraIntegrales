@@ -174,9 +174,9 @@ public class CalculadoraIntegrales extends JFrame {
                 return;
             }
             
-            if (numParticiones < 1 || numParticiones > 100) {
+            if (numParticiones < 1 || numParticiones > 10000) {
                 JOptionPane.showMessageDialog(this, 
-                    "El número de particiones debe estar entre 1 y 100",
+                    "El número de particiones debe estar entre 1 y 10000",
                     "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -198,7 +198,8 @@ public class CalculadoraIntegrales extends JFrame {
             
             // Configurar gráfico con particiones
             panelGrafico.setDatos(puntos, a, b);
-            if (chkMostrarParticiones.isSelected()) {
+            if (chkMostrarParticiones.isSelected() && numParticiones <= 100) {
+                // Solo mostrar particiones si son 100 o menos para no saturar el gráfico
                 panelGrafico.setParticiones(resultadoParticiones.particiones);
             } else {
                 panelGrafico.setParticiones(null);
@@ -212,6 +213,13 @@ public class CalculadoraIntegrales extends JFrame {
             
             sb.append(String.format("Función: %s\n", funcion));
             sb.append(String.format("Intervalo: [%.4f, %.4f]\n\n", a, b));
+            
+            // Avisar si no se muestran particiones en el gráfico
+            if (chkMostrarParticiones.isSelected() && numParticiones > 100) {
+                sb.append("⚠ NOTA: Con más de 100 particiones no se muestran\n");
+                sb.append("   los rectángulos en el gráfico para evitar saturación.\n");
+                sb.append("   Los cálculos se realizan correctamente con todas las particiones.\n\n");
+            }
             
             sb.append("───────────────────────────────────────────\n");
             sb.append("MÉTODO DE PARTICIONES - " + metodo + "\n");
@@ -272,9 +280,31 @@ public class CalculadoraIntegrales extends JFrame {
             
             sb.append("───────────────────────────────────────────\n");
             sb.append("💡 Sobre las particiones:\n");
-            sb.append("  A mayor número de particiones, mayor precisión.\n");
-            sb.append("  El método del trapecio converge más rápido que\n");
-            sb.append("  los métodos de punto medio o extremos.\n");
+            if (numParticiones <= 100) {
+                sb.append("  • A mayor número de particiones, mayor precisión\n");
+                sb.append("  • Los rectángulos son visibles en el gráfico\n");
+            } else {
+                sb.append("  • Con " + numParticiones + " particiones: alta precisión\n");
+                sb.append("  • Gráfico muestra solo la curva (evita saturación)\n");
+            }
+            sb.append("  • El método del trapecio converge más rápido que\n");
+            sb.append("    los métodos de punto medio o extremos\n");
+            
+            // Mostrar análisis de convergencia
+            sb.append("\n📊 ANÁLISIS DE CONVERGENCIA:\n");
+            if (errorPorcentual < 0.01) {
+                sb.append("  ✓ Excelente: Error < 0.01%\n");
+            } else if (errorPorcentual < 0.1) {
+                sb.append("  ✓ Muy bueno: Error < 0.1%\n");
+            } else if (errorPorcentual < 1) {
+                sb.append("  ✓ Bueno: Error < 1%\n");
+            } else if (errorPorcentual < 5) {
+                sb.append("  → Aceptable: Error < 5%\n");
+                sb.append("  Considere aumentar el número de particiones\n");
+            } else {
+                sb.append("  ⚠ Mejorable: Error > 5%\n");
+                sb.append("  Recomendación: Use más particiones\n");
+            }
             
             txtResultados.setText(sb.toString());
             txtResultados.setCaretPosition(0);
