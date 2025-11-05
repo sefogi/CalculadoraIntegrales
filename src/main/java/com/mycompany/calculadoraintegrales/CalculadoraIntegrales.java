@@ -149,7 +149,8 @@ public class CalculadoraIntegrales extends JFrame {
             "Sintaxis soportada:\n" +
             "• Operadores: +, -, *, /, ^ (potencia), paréntesis ()\n" +
             "• Funciones: sin(x), cos(x), tan(x), sqrt(x), abs(x), ln(x), log(x), exp(x)\n" +
-            "• Constantes: pi, e\n" +
+            "• Constantes: pi, e (también en límites: 0 a pi, -pi a pi, etc.)\n" +
+            "• Límites pueden ser: números (3.14), constantes (pi, 2*pi), expresiones (pi/2)\n" +
             "• Particiones: Muestra rectángulos aproximando el área según el método seleccionado\n" +
             "• Ejemplos: x^3, sin(x)*cos(x), 2*x^2+3*x-1, sqrt(x^2+1)"
         );
@@ -162,8 +163,11 @@ public class CalculadoraIntegrales extends JFrame {
     private void calcular() {
         try {
             String funcion = txtFuncion.getText().trim();
-            double a = Double.parseDouble(txtLimiteInf.getText().trim());
-            double b = Double.parseDouble(txtLimiteSup.getText().trim());
+            
+            // Procesar límites (permitir pi, e, expresiones)
+            double a = evaluarLimite(txtLimiteInf.getText().trim());
+            double b = evaluarLimite(txtLimiteSup.getText().trim());
+            
             int numParticiones = Integer.parseInt(txtNumParticiones.getText().trim());
             String metodo = (String) cmbMetodoParticion.getSelectedItem();
             
@@ -384,6 +388,36 @@ public class CalculadoraIntegrales extends JFrame {
         }
         
         return puntos;
+    }
+    
+    // Evaluar límites (permite pi, e, expresiones simples)
+    private double evaluarLimite(String limite) throws Exception {
+        if (limite == null || limite.isEmpty()) {
+            throw new Exception("Límite vacío");
+        }
+        
+        limite = limite.toLowerCase().trim();
+        
+        // Reemplazar constantes
+        limite = limite.replace("pi", String.valueOf(Math.PI));
+        limite = limite.replace("π", String.valueOf(Math.PI));
+        
+        // Manejar 'e' con cuidado
+        if (limite.equals("e")) {
+            return Math.E;
+        }
+        
+        // Si contiene operadores, evaluar como expresión
+        if (limite.contains("+") || limite.contains("-") || limite.contains("*") || limite.contains("/")) {
+            return evaluador.evaluar(limite, 0); // x=0 porque no hay variable
+        }
+        
+        // Si es solo un número
+        try {
+            return Double.parseDouble(limite);
+        } catch (NumberFormatException e) {
+            throw new Exception("Límite inválido: " + limite);
+        }
     }
     
     // Calcular integral con particiones
