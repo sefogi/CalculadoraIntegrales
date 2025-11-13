@@ -226,89 +226,14 @@ public class CalculadoraIntegrales extends JFrame {
             }
             
             sb.append("───────────────────────────────────────────\n");
-            sb.append("MÉTODO DE PARTICIONES - " + metodo + "\n");
-            sb.append("───────────────────────────────────────────\n");
-            sb.append(String.format("   Número de particiones: %d\n", numParticiones));
-            sb.append(String.format("   Ancho de cada partición: %.6f\n", resultadoParticiones.anchoPart));
-            sb.append(String.format("   Aproximación por particiones: %.6f\n\n", resultadoParticiones.aproximacion));
+            sb.append("              ÁREAS CALCULADAS\n");
+            sb.append("───────────────────────────────────────────\n\n");
             
-            sb.append("───────────────────────────────────────────\n");
-            sb.append("1. INTEGRAL DEFINIDA (Método del Trapecio)\n");
-            sb.append("───────────────────────────────────────────\n");
-            sb.append(String.format("   ∫[%.2f,%.2f] f(x)dx = %.6f\n", a, b, integralDefinida));
-            sb.append(String.format("   (Con %d subdivisiones para mayor precisión)\n\n", n));
-            sb.append("   • Puede ser negativa o cero\n");
-            sb.append("   • Áreas positivas y negativas se restan\n\n");
-            
-            // Calcular error de aproximación
-            double error = Math.abs(integralDefinida - resultadoParticiones.aproximacion);
-            double errorPorcentual = integralDefinida != 0 ? (error / Math.abs(integralDefinida)) * 100 : 0;
-            
-            sb.append("   📊 Error de aproximación:\n");
-            sb.append(String.format("      Error absoluto: %.6f\n", error));
-            if (integralDefinida != 0) {
-                sb.append(String.format("      Error porcentual: %.2f%%\n", errorPorcentual));
-            }
-            sb.append("\n");
-            
-            sb.append("───────────────────────────────────────────\n");
-            sb.append("2. ÁREA TOTAL (Valor absoluto)\n");
-            sb.append("───────────────────────────────────────────\n");
-            sb.append(String.format("   Área Total = %.6f unidades²\n\n", areaTotal));
-            sb.append("   • Siempre positiva\n");
-            sb.append("   • Suma de |áreas positivas| + |áreas negativas|\n\n");
-            
-            sb.append("───────────────────────────────────────────\n");
-            sb.append("3. ÁREAS POR REGIÓN\n");
-            sb.append("───────────────────────────────────────────\n");
-            sb.append(String.format("   Área Positiva (f(x) > 0): %.6f\n", areas.areaPositiva));
-            sb.append(String.format("   Área Negativa (f(x) < 0): %.6f\n\n", areas.areaNegativa));
+            sb.append(String.format("📊 Área Positiva:  %.6f unidades²\n", areas.areaPositiva));
+            sb.append(String.format("📊 Área Negativa:  %.6f unidades²\n", areas.areaNegativa));
+            sb.append(String.format("📊 Área Total:     %.6f unidades²\n\n", areaTotal));
             
             sb.append("═══════════════════════════════════════════\n");
-            sb.append("              INTERPRETACIÓN\n");
-            sb.append("═══════════════════════════════════════════\n\n");
-            
-            if (Math.abs(integralDefinida) < 0.0001 && areaTotal > 0.0001) {
-                sb.append("⚠ CASO ESPECIAL DETECTADO:\n");
-                sb.append("  La integral definida es ≈0 porque las áreas\n");
-                sb.append("  positiva y negativa se cancelan.\n");
-                sb.append("  Sin embargo, el ÁREA REAL bajo la curva es:\n");
-                sb.append(String.format("  %.6f unidades cuadradas.\n\n", areaTotal));
-            } else if (integralDefinida < 0) {
-                sb.append("• La integral es negativa porque hay más\n");
-                sb.append("  área bajo el eje X que sobre él.\n\n");
-            } else {
-                sb.append("• La integral es positiva porque hay más\n");
-                sb.append("  área sobre el eje X que bajo él.\n\n");
-            }
-            
-            sb.append("───────────────────────────────────────────\n");
-            sb.append("💡 Sobre las particiones:\n");
-            if (numParticiones <= 100) {
-                sb.append("  • A mayor número de particiones, mayor precisión\n");
-                sb.append("  • Los rectángulos son visibles en el gráfico\n");
-            } else {
-                sb.append("  • Con " + numParticiones + " particiones: alta precisión\n");
-                sb.append("  • Gráfico muestra solo la curva (evita saturación)\n");
-            }
-            sb.append("  • El método del trapecio converge más rápido que\n");
-            sb.append("    los métodos de punto medio o extremos\n");
-            
-            // Mostrar análisis de convergencia
-            sb.append("\n📊 ANÁLISIS DE CONVERGENCIA:\n");
-            if (errorPorcentual < 0.01) {
-                sb.append("  ✓ Excelente: Error < 0.01%\n");
-            } else if (errorPorcentual < 0.1) {
-                sb.append("  ✓ Muy bueno: Error < 0.1%\n");
-            } else if (errorPorcentual < 1) {
-                sb.append("  ✓ Bueno: Error < 1%\n");
-            } else if (errorPorcentual < 5) {
-                sb.append("  → Aceptable: Error < 5%\n");
-                sb.append("  Considere aumentar el número de particiones\n");
-            } else {
-                sb.append("  ⚠ Mejorable: Error > 5%\n");
-                sb.append("  Recomendación: Use más particiones\n");
-            }
             
             txtResultados.setText(sb.toString());
             txtResultados.setCaretPosition(0);
@@ -318,10 +243,24 @@ public class CalculadoraIntegrales extends JFrame {
                 "Por favor ingrese números válidos para los límites y particiones",
                 "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, 
-                "Error al evaluar la función:\n" + e.getMessage() +
-                "\n\nVerifique la sintaxis de la función.",
-                "Error", JOptionPane.ERROR_MESSAGE);
+            String mensaje = e.getMessage();
+            
+            // Mensajes específicos para errores comunes
+            if (mensaje.contains("no está definida")) {
+                JOptionPane.showMessageDialog(this, 
+                    "Error: " + mensaje + "\n\n" +
+                    "Ejemplos de restricciones:\n" +
+                    "• sqrt(x-3) requiere x >= 3\n" +
+                    "• ln(x) requiere x > 0\n" +
+                    "• 1/x no está definida en x = 0\n\n" +
+                    "Ajuste el intervalo de integración.",
+                    "Dominio de la Función", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "Error al evaluar la función:\n" + mensaje +
+                    "\n\nVerifique la sintaxis de la función.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     
@@ -329,15 +268,24 @@ public class CalculadoraIntegrales extends JFrame {
         double h = (b - a) / n;
         double suma = 0;
         
-        for (int i = 0; i <= n; i++) {
-            double x = a + i * h;
-            double y = evaluador.evaluar(funcion, x);
-            
-            if (i == 0 || i == n) {
-                suma += y;
-            } else {
-                suma += 2 * y;
+        try {
+            for (int i = 0; i <= n; i++) {
+                double x = a + i * h;
+                double y = evaluador.evaluar(funcion, x);
+                
+                // Verificar si el resultado es válido
+                if (Double.isNaN(y) || Double.isInfinite(y)) {
+                    throw new Exception("La función no está definida en x = " + x);
+                }
+                
+                if (i == 0 || i == n) {
+                    suma += y;
+                } else {
+                    suma += 2 * y;
+                }
             }
+        } catch (Exception e) {
+            throw new Exception("Error al evaluar la función: " + e.getMessage());
         }
         
         return (h / 2) * suma;
@@ -347,11 +295,24 @@ public class CalculadoraIntegrales extends JFrame {
         double h = (b - a) / n;
         double area = 0;
         
-        for (int i = 0; i < n; i++) {
-            double x = a + i * h;
-            double y1 = Math.abs(evaluador.evaluar(funcion, x));
-            double y2 = Math.abs(evaluador.evaluar(funcion, x + h));
-            area += (y1 + y2) * h / 2;
+        try {
+            for (int i = 0; i < n; i++) {
+                double x = a + i * h;
+                double y1 = evaluador.evaluar(funcion, x);
+                double y2 = evaluador.evaluar(funcion, x + h);
+                
+                // Verificar si los resultados son válidos
+                if (Double.isNaN(y1) || Double.isInfinite(y1)) {
+                    throw new Exception("La función no está definida en x = " + x);
+                }
+                if (Double.isNaN(y2) || Double.isInfinite(y2)) {
+                    throw new Exception("La función no está definida en x = " + (x + h));
+                }
+                
+                area += (Math.abs(y1) + Math.abs(y2)) * h / 2;
+            }
+        } catch (Exception e) {
+            throw new Exception("Error al calcular área: " + e.getMessage());
         }
         
         return area;
